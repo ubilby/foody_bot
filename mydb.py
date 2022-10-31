@@ -20,7 +20,7 @@ def add_to_db(entry: Entry) -> None:
 			id INTEGER PRIMARY KEY,
 			value INTEGER NOT NULL,
 			category TEXT NOT NULL,
-			addingDate timestamp);
+			addingDate DATE);
 	"""
 
 	sqlite_insert_query = """
@@ -33,7 +33,7 @@ def add_to_db(entry: Entry) -> None:
 	with db_open("test.db") as cur:
 		cur.execute(
 			sqlite_insert_query,
-			(entry.value, entry.category, datetime.datetime.now())
+			(entry.value, entry.category, entry.date)
 		)
 
 
@@ -45,7 +45,7 @@ def view_last_10_entry() -> list[Entry]:
 	"""
 
 	sql_select_query = """
-		SELECT value, category
+		SELECT value, category, addingDate
 		FROM outcoming
 		ORDER BY id DESC
 		LIMIT 10;
@@ -57,8 +57,21 @@ def view_last_10_entry() -> list[Entry]:
 
 	if isTableExist:
 		with db_open("test.db") as cur:
-			res = [Entry(e[0], e[1]) for e in cur.execute(sql_select_query).fetchall()]
+			res = [Entry(e[0], e[1], e[2]) for e in cur.execute(sql_select_query).fetchall()]
 		return res
 
 	else:
 		return []
+
+
+def delete_entry_from_db(entry: Entry) -> None:
+	find_id_query = f"""SELECT id
+		FROM outcoming
+		WHERE value={entry.value}
+		AND category='{entry.category}'
+		AND addingDate='{entry.date}';"""
+	delete_by_id_querry = f"DELETE FROM outcoming WHERE id=?"
+	with db_open("test.db") as cur:
+		res = cur.execute(find_id_query).fetchall()
+		print(res)
+		cur.execute(delete_by_id_querry, res[0])
