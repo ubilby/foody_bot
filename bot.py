@@ -3,11 +3,14 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, Text, Filter
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.context import FSMContext
 import datetime
 
-from my_foos import Entry, parse_text, isCorrect, parse_text_from_db
+from my_foos import Entry, parse_text_from_input, isCorrect, parse_text_from_db
 from keyboards.keyboards import confirm_kb, main_kb, view_entrys_kb, yes_no
 from mydb import add_to_db, view_last_10_entry, delete_entry_from_db
+from myfilter import AccesedUsersFilter
+from states import Mode
 
 
 # Включаем логирование, чтобы не пропустить важные сообщения
@@ -16,22 +19,58 @@ logging.basicConfig(level=logging.INFO)
 with open("TOKEN") as file:
     token = file.read()
 
-#временное ограничение доступа
-user_filter = lambda msg: msg.chat.username in ["ubilby", "Tata_Gapo"]
+
+#временный объект записи для передачи между методами
+entry = Entry(0,"",datetime.date.today())
+
 
 # Диспетчер
 dp = Dispatcher()
+dp.message.filter(AccesedUsersFilter(users = ["ubilby", "Tata_Gapo"]))
 
 
-#Метод правки
-@dp.message(user_filter, Command(commands=["start", "help"]))
+#Метод справки
+@dp.message(Command(commands=["start", "help"]))
 async def view_help(message: types.Message) -> None:
     print(message.chat.username)
     await message.answer("Здесь будет справка", reply_markup = main_kb())
 
 
+# Считывание сообщения для изменения
+@dp.message(Mode.edit)
+async def read_message(message: types.Message, state: FSMContext, temp_Entry: Entry) -> None:
+    if (isCorrect(message.text)):
+        await message.answer(
+                f"Изменить данные в записи {temp_Entry} на:\n\"{message.text}\"?",
+                reply_markup = confirm_kb()
+            )
+    else:
+        await message.answer(
+            f"Некорректный формат ввода. Для изменения записи введите число и слово.\
+             Введите новые данные (категорию и сумму) для записи:\n{temp_Entry}", reply_markup = main_kb())
+
+
+@dp.callback_query(Mode.edit, Text(text=["confirm"]))
+async def send_confirm_msg(callback: types.CallbackQuery, state: FSMContext, temp_Entry: Entry) -> None:
+    #Здесь будет вызов метода редактирования записи
+    await callback.message.answer("Позже здесь таки-будет вызов метода редактирования записи")
+    await callback.message.delete()
+    await state.clear()
+
+
+#добавить информацию об удаленной записи
+@dp.callback_query(Mode.edit, Text(text=["cancel"]))
+async def send_cancel_msg(callback: types.CallbackQuery, state: FSMContext, temp_Entry: Entry) -> None:
+    await callback.message.answer(
+        f"Отмено изменение в записи {temp_Entry}",
+        reply_markup = main_kb()
+    )
+    await callback.message.delete()
+    await state.clear()
+
+
 #Метод просмотра последних десяти записей
-@dp.message(user_filter, Text(text=["Просмотр записей"]))
+@dp.message(Text(text=["Просмотр записей"]))
 async def view_entrys(message: types.Message) -> None:
     entry_list = view_last_10_entry()
     if entry_list:
@@ -43,7 +82,7 @@ async def view_entrys(message: types.Message) -> None:
 
 
 # Считывание сообщения для добавления
-@dp.message(user_filter)
+@dp.message()
 async def read_message(message: types.Message) -> None:
     if (isCorrect(message.text)):
         await message.answer(
@@ -57,8 +96,8 @@ async def read_message(message: types.Message) -> None:
 #добавить информацию о поддвержденной записи
 @dp.callback_query(Text(text=["confirm"]))
 async def send_confirm_msg(callback: types.CallbackQuery) -> None:
-    print(callback.message.text[17:-2])
-    entry = parse_text(callback.message.text[17:-2])
+    entry = parse_text_from_input(callback.message.text[17:-2])
+    print(entry)
     await callback.message.answer(
         f"Запись добавлена: {entry}",
         reply_markup = main_kb()
@@ -71,7 +110,7 @@ async def send_confirm_msg(callback: types.CallbackQuery) -> None:
 @dp.callback_query(Text(text=["cancel"]))
 async def send_cancel_msg(callback: types.CallbackQuery) -> None:
     await callback.message.answer(
-        f"Запись отменена {(callback.message.text)}",
+        f"Запись отменена {(callback.message.text[17:-2])}",
         reply_markup = main_kb()
     )
     await callback.message.delete()
@@ -80,12 +119,40 @@ async def send_cancel_msg(callback: types.CallbackQuery) -> None:
 @dp.callback_query(Text(text=["remove"]))
 async def callback_remove_entry(callback: types.CallbackQuery) -> None:
     entry = parse_text_from_db(callback.message.text)
+    await callback.message.answer(
+        f"Удалить запись: {entry}?",
+        reply_markup = yes_no()
+    )
+
+
+#добавить информацию о поддвержденной записи
+@dp.callback_query(Text(text=["yes"]))
+async def send_confirm_msg(callback: types.CallbackQuery) -> None:
+    entry = parse_text_from_db(callback.message.text[16:-1])
     delete_entry_from_db(entry)
     await callback.message.answer(
-        f"Удалить запись {entry}?",
-        #reply_markup = yes_no()
+        f"Запись удалена: {entry}",
+        reply_markup = main_kb()
     )
     await callback.message.delete()
+
+
+@dp.callback_query(Text(text=["no"]))
+async def send_confirm_msg(callback: types.CallbackQuery) -> None:
+    await callback.message.answer(
+        f"Удаление записи отменено.",
+        reply_markup = main_kb()
+    )
+    await callback.message.delete()
+
+
+@dp.callback_query(Text(text=["edit"]))
+async def send_confirm_msg(callback: types.CallbackQuery, state: FSMContext, temp_Entry: Entry) -> None:
+    temp_Entry.update(parse_text_from_db(callback.message.text))
+    await callback.message.answer(
+        f"Введите новые данные (категорию и сумму) для записи:\n{temp_Entry}"
+    )
+    await state.set_state(Mode.edit)
 
 
 # Запуск процесса поллинга новых апдейтов
@@ -93,7 +160,7 @@ async def main() -> None:
     # Объект бота
     bot = Bot(token, parse_mode="HTML")
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, temp_Entry = entry)
 
 
 if __name__ == "__main__":

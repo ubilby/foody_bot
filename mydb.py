@@ -73,5 +73,4 @@ def delete_entry_from_db(entry: Entry) -> None:
 	delete_by_id_querry = f"DELETE FROM outcoming WHERE id=?"
 	with db_open("test.db") as cur:
 		res = cur.execute(find_id_query).fetchall()
-		print(res)
 		cur.execute(delete_by_id_querry, res[0])
