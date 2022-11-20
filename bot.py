@@ -32,8 +32,14 @@ dp.message.filter(AccesedUsersFilter(users = ["ubilby", "Tata_Gapo"]))
 #Метод справки
 @dp.message(Command(commands=["start", "help"]))
 async def view_help(message: types.Message) -> None:
-    print(message.chat.username)
-    await message.answer("Здесь будет справка", reply_markup = main_kb())
+    await message.answer(
+        "Чтобы добавить запись нужно ввести число и слово,т.е.\
+указать сумму и категорию в любом порядке. При редактировании\
+и удалении (или отмены удаления) записей требуется подтвердить\
+или отменить последние действия прежде чем приступать к новым\
+ - мы работаем над тем, чтобы упростить взаимодействие, но пока так",
+        reply_markup = main_kb()
+    )
 
 
 # Считывание сообщения для изменения
