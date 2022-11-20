@@ -2,7 +2,7 @@ import sqlite3
 from contextlib import contextmanager
 import datetime
 
-from my_foos import Entry
+from my_foos import Entry, parse_text_from_input
 
 
 @contextmanager
@@ -74,3 +74,24 @@ def delete_entry_from_db(entry: Entry) -> None:
 	with db_open("test.db") as cur:
 		res = cur.execute(find_id_query).fetchall()
 		cur.execute(delete_by_id_querry, res[0])
+
+
+def edit_entry_in_db(entry: Entry, new_values: str):
+	new_entrys_values = parse_text_from_input(new_values)
+
+	find_id_query = f"""SELECT id
+		FROM outcoming
+		WHERE value={entry.value}
+		AND category='{entry.category}'
+		AND addingDate='{entry.date}';"""
+
+	update_by_id_querry = f"""UPDATE outcoming
+		SET value= ?,
+		category= ?
+		WHERE id= ?;"""
+
+	with db_open("test.db") as cur:
+		res = cur.execute(find_id_query).fetchall()
+		cur.execute(update_by_id_querry, (new_entrys_values.value,
+					new_entrys_values.category, res[0][0]))
+

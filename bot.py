@@ -8,7 +8,7 @@ import datetime
 
 from my_foos import Entry, parse_text_from_input, isCorrect, parse_text_from_db
 from keyboards.keyboards import confirm_kb, main_kb, view_entrys_kb, yes_no
-from mydb import add_to_db, view_last_10_entry, delete_entry_from_db
+from mydb import add_to_db, view_last_10_entry, delete_entry_from_db, edit_entry_in_db
 from myfilter import AccesedUsersFilter
 from states import Mode
 
@@ -41,7 +41,7 @@ async def view_help(message: types.Message) -> None:
 async def read_message(message: types.Message, state: FSMContext, temp_Entry: Entry) -> None:
     if (isCorrect(message.text)):
         await message.answer(
-                f"Изменить данные в записи {temp_Entry} на:\n\"{message.text}\"?",
+                f"Изменить данные в записи {temp_Entry} на:\n'{message.text}'?",
                 reply_markup = confirm_kb()
             )
     else:
@@ -53,16 +53,18 @@ async def read_message(message: types.Message, state: FSMContext, temp_Entry: En
 @dp.callback_query(Mode.edit, Text(text=["confirm"]))
 async def send_confirm_msg(callback: types.CallbackQuery, state: FSMContext, temp_Entry: Entry) -> None:
     #Здесь будет вызов метода редактирования записи
-    await callback.message.answer("Позже здесь таки-будет вызов метода редактирования записи")
+    new_values = callback.message.text.split("\n")[1][1:-2]
+    edit_entry_in_db(temp_Entry, new_values)
     await callback.message.delete()
     await state.clear()
+    await callback.message.answer(f"Данные в записи {temp_Entry} изменены на {new_values}")
 
 
 #добавить информацию об удаленной записи
 @dp.callback_query(Mode.edit, Text(text=["cancel"]))
 async def send_cancel_msg(callback: types.CallbackQuery, state: FSMContext, temp_Entry: Entry) -> None:
     await callback.message.answer(
-        f"Отмено изменение в записи {temp_Entry}",
+        f"Отменено изменение в записи {temp_Entry}",
         reply_markup = main_kb()
     )
     await callback.message.delete()
