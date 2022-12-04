@@ -5,6 +5,7 @@ from aiogram.filters import Command, Text, Filter
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 import datetime
+from os import environ
 
 from my_foos import Entry, parse_text_from_input, isCorrect, parse_text_from_db
 from keyboards.keyboards import confirm_kb, main_kb, view_entrys_kb, yes_no
@@ -16,8 +17,10 @@ from states import Mode
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
 
-with open("TOKEN") as file:
-    token = file.read()
+
+token = environ["FOODY_TOKEN"]
+# with open("TOKEN") as file:
+#     token = file.read()
 
 
 #временный объект записи для передачи между методами
