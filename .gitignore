@@ -3,3 +3,4 @@ TOKEN
 __pycache__/
 .vs/
 test.db
+Dockerfile

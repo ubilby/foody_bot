@@ -6,13 +6,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 import datetime
 from os import environ
+from os.path import abspath
 
 from my_foos import Entry, parse_text_from_input, isCorrect, parse_text_from_db
 from keyboards.keyboards import confirm_kb, main_kb, view_entrys_kb, yes_no
 from mydb import add_to_db, view_last_10_entry, delete_entry_from_db, edit_entry_in_db
 from myfilter import AccesedUsersFilter
 from states import Mode
-
 
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
@@ -35,6 +35,8 @@ dp.message.filter(AccesedUsersFilter(users = ["ubilby", "Tata_Gapo"]))
 #Метод справки
 @dp.message(Command(commands=["start", "help"]))
 async def view_help(message: types.Message) -> None:
+    print(abspath(""))
+
     await message.answer(
         "Чтобы добавить запись нужно ввести число и слово,т.е.\
 указать сумму и категорию в любом порядке. При редактировании\
