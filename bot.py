@@ -6,13 +6,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 import datetime
 from os import environ
-from os.path import abspath
 
-from my_foos import Entry, parse_text_from_input, isCorrect, parse_text_from_db
-from keyboards.keyboards import confirm_kb, main_kb, view_entrys_kb, yes_no
-from mydb import add_to_db, view_last_10_entry, delete_entry_from_db, edit_entry_in_db
+from my_foos import hard_code_categories, Entry, parse_text_from_input, isCorrect, parse_text_from_db
+from keyboards.keyboards import confirm_kb, main_kb, view_entrys_kb, yes_no, choice_period_kb
+from mydb import create_table, add_entry_to_db, view_last_10_entry, delete_entry_from_db, edit_entry_in_db, sqlite_create_categorys_table_query, sqlite_create_outcoming_table_query
 from myfilter import AccesedUsersFilter
 from states import Mode
+
 
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
@@ -35,12 +35,11 @@ dp.message.filter(AccesedUsersFilter(users = ["ubilby", "Tata_Gapo"]))
 #Метод справки
 @dp.message(Command(commands=["start", "help"]))
 async def view_help(message: types.Message) -> None:
-    print(abspath(""))
 
     await message.answer(
-        "Чтобы добавить запись нужно ввести число и слово,т.е.\
-указать сумму и категорию в любом порядке. При редактировании\
-и удалении (или отмены удаления) записей требуется подтвердить\
+        "Чтобы добавить запись нужно ввести число и слово, т.е.\
+указать сумму и категорию в любом порядке. При редактировании \
+и удалении (или отмены удаления) записей требуется подтвердить \
 или отменить последние действия прежде чем приступать к новым\
  - мы работаем над тем, чтобы упростить взаимодействие, но пока так",
         reply_markup = main_kb()
@@ -85,13 +84,29 @@ async def send_cancel_msg(callback: types.CallbackQuery, state: FSMContext, temp
 #Метод просмотра последних десяти записей
 @dp.message(Text(text=["Просмотр записей"]))
 async def view_entrys(message: types.Message) -> None:
+    message.answer("Выберете период", reply_markup = choice_period_kb())
+
+
+#Метод просмотра последних десяти записей
+@dp.message(Text(text=["Сегодня"]))
+async def view_entrys(message: types.Message) -> None:
+    #нужно написать функцию взаимодействия с ДБ,
+    #которая принимает рейндж дат, пробегается по записям и считает
+    #каждую запись относит к поределенной категории и считает 
+    #сколько потрачено на эту категорию
+    message.answer("", reply_markup = main_kb())
+
+
+#Метод просмотра последних десяти записей
+@dp.message(Text(text=["Последние 10 записей"]))
+async def view_entrys(message: types.Message) -> None:
     entry_list = view_last_10_entry()
     if entry_list:
-        await message.answer("Последние записи:")
+        await message.answer("Последние записи:", reply_markup = main_kb())
         for entry in entry_list:
             await message.answer(f"{entry}", reply_markup = view_entrys_kb())
     else:
-            await message.answer("Еще нет записей.")
+            await message.answer("Еще нет записей.", reply_markup = main_kb())
 
 
 # Считывание сообщения для добавления
@@ -115,7 +130,7 @@ async def send_confirm_msg(callback: types.CallbackQuery) -> None:
         f"Запись добавлена: {entry}",
         reply_markup = main_kb()
     )
-    add_to_db(entry)
+    add_entry_to_db(entry)
     await callback.message.delete()
 
 
@@ -171,6 +186,9 @@ async def send_confirm_msg(callback: types.CallbackQuery, state: FSMContext, tem
 # Запуск процесса поллинга новых апдейтов
 async def main() -> None:
     # Объект бота
+    create_table(sqlite_create_categorys_table_query)
+    create_table(sqlite_create_outcoming_table_query)
+    fill_category_table(hard_code_categories)
     bot = Bot(token, parse_mode="HTML")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, temp_Entry = entry)

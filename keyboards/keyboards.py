@@ -58,3 +58,17 @@ def main_kb() -> ReplyKeyboardMarkup:
 	return keyboard
 
 
+def choice_period_kb() -> ReplyKeyboardMarkup:
+	kb = [
+		[KeyboardButton(text="Последние 10 записей")],
+		[KeyboardButton(text="Сегодня")],
+		[KeyboardButton(text="Вчера")],
+		[KeyboardButton(text="Эта неделя")],
+		[KeyboardButton(text="Прошлая неделя")],
+		[KeyboardButton(text="Этот месяц")],
+		[KeyboardButton(text="Прошлый месяц")],
+	]
+
+	keyboard = ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+
+	return keyboard	

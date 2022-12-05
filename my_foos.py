@@ -1,27 +1,49 @@
 from argparse import OPTIONAL
 from typing import NamedTuple
 from datetime import date
+from mydb import add_description_to_db
+
+
+hard_code_categories = {
+    "продукты" : ["продукты", "магазин", "овощи", "фрукты"],
+    "транспорт": ["транспорт", "такси", "метро", "taxi"],
+    "общепит": ["общепит", "кафе", "перекус"],
+    "досуг": ["досуг", "развлечения", "бар", "тусовка"],
+    "красота": ["красота"],
+    "квартира": ["квартира", "к/у", "аренда", "ку"],
+    "быт": ["быт"],
+    "дети": ["дети", "школа"],
+    "спорт": ["гошаспорт", "татаспорт"]
+}
+
+
+def fill_category_table(categories: dict):
+	check_query = """"""
+	for category, descriptions in categories.items():
+		for description in descriptions:
+			if not is_description_in_db(description):
+				add_description_to_db(description, category)
 
 
 class Entry:
 	"""Структура распарcенного сообщения о новом расходе"""
 	value: int
-	category: str
+	description: str
 	date: date
 
-	def __init__(self, value, category, date):
+	def __init__(self, value, description, date):
 		self.value = value
-		self.category = category
+		self.description = description
 		self.date = date
 
 
 	def __str__(self):
-		return f"{self.date} {self.category} {self.value}"
+		return f"{self.date} {self.description} {self.value}"
 
 
 	def update(self, entry):
 		self.value = entry.value
-		self.category = entry.category
+		self.description = entry.description
 		self.date = entry.date
 
 
